@@ -1,88 +1,566 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="./static/css/styles.css" />
-        <meta
-            http-equiv="Content-Security-Policy"
-            content="default-src * 'unsafe-inline' 'unsafe-eval'"
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Tauri App</title>
-        <script src="./static/js/main.js"></script>
-    </head>
-    <body>
-        <main class="container">
-            <h1>Welcome to TauriMan</h1>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>专用计算器</title>
+<!-- 引入拖拽排序库 -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<style>
+*{box-sizing: border-box;}
+body{font-family:Arial;padding:10px;background:#f2f2f2;display:flex;justify-content:center;margin:0;}
+.main{width:100%;max-width:380px;}
+.item{background:white;padding:12px;margin:8px 0;border-radius:8px;cursor:grab;}
+.item:active{cursor:grabbing;}
+/* 加密模块默认隐藏样式 */
+.hidden-item{display: none;}
+/* 拖拽时的样式 */
+.sortable-ghost{opacity:0.4;}
+.sortable-chosen{box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:scale(1.02);}
 
-            <div class="row">
-                <a
-                    href="https://tauri.app"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <img
-                        src="./assets/tauri.svg"
-                        class="logo tauri"
-                        alt="Tauri logo"
-                    />
-                </a>
-                <a
-                    href="https://pakeplus.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <img
-                        src="https://hk.gh-proxy.org/https://github.com/Sjj1024/PakePlus/blob/main/app-icon.png"
-                        class="logo vanilla"
-                        alt="JavaScript logo"
-                    />
-                </a>
-            </div>
-            <p>Click to get data</p>
-            <form class="row" id="greet-form">
-                <input id="greet-input" placeholder="Enter a name..." />
-                <button type="submit" id="getdata">GET DATA</button>
-            </form>
-            <div class="functions">
-                <a href="./book.html" target="_self">跳转到book.html</a>
-                <a
-                    href="https://www.baidu.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >跳到百度blank
-                </a>
-                <a
-                    href="https://www.baidu.com"
-                    target="_self"
-                    rel="noopener noreferrer"
-                >
-                    跳到百度self
-                </a>
-                <button onclick="sayHello()">点击我</button>
-                <button onclick="sayHello()">下载文件</button>
-                <button onclick="sayHello()">上传文件</button>
-                <button onclick="sayHello()">访问相机</button>
-                <button onclick="sayHello()">访问麦克风</button>
-                <button onclick="sayHello()">访问相册</button>
-                <button class="btn" onclick="openWechat()">打开微信</button>
-                <button class="btn" onclick="openWechatScan()">
-                    打开扫一扫
-                </button>
-                <button class="btn" onclick="openZhihu()">打开知乎</button>
-                <button onclick="sayHello()">打开抖音</button>
-                <button onclick="sayHello()">用浏览器打开</button>
-                <button>打开知乎</button>
-            </div>
-            <p id="greet-msg"></p>
-            <img src="./static/image/cursor.jpeg" alt="logo" />
-            <video
-                src="https://hk.gh-proxy.org/https://github.com/Sjj1024/PakePlus/blob/main/docs/static/videos/pakeplus.mp4"
-                autoplay
-                controls
-                style="width: 100%; height: 100%"
-            ></video>
-            <audio src="./static/music/yin.mp3" controls></audio>
-        </main>
-    </body>
+h3{font-size:16px;margin:0 0 6px 0;color:#333;display:flex;align-items:center;justify-content:space-between;}
+/* 拖拽手柄图标 */
+.handle{color:#999;font-size:18px;letter-spacing:-2px;user-select:none;-webkit-user-select:none;touch-action:none;}
+input{width:100%;padding:10px;margin:4px 0;border:1px solid #ccc;border-radius:6px;font-size:15px;}
+
+/* 按钮行：计算 + 清空 并排 */
+.btn-row{display:flex;gap:6px;margin-top:6px;}
+button{flex:1;padding:10px;border:none;border-radius:6px;font-size:15px;}
+.calc{background:#007AFF;color:white;}
+.clear{background:#FF3B30;color:white;}
+
+.res{margin-top:8px;font-weight:bold;color:#000;font-size:15px;line-height:1.4}
+
+/* 底部内容样式 */
+.footer-content{text-align:center;font-size:15px;color:#333;padding:8px 0;}
+.footer-item{cursor:pointer;user-select:none;-webkit-user-select:none;}
+
+/* 自定义居中弹窗样式（统一所有弹窗） */
+.modal-overlay{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;
+  z-index:9999;
+}
+.modal-box{
+  background:white;padding:25px;border-radius:12px;min-width:260px;
+  text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.2);
+}
+.modal-text{font-size:16px;margin-bottom:20px;color:#333}
+/* 统一弹窗按钮样式 */
+.modal-btn-row{display:flex;gap:10px;margin-top:15px;}
+.modal-btn{
+  flex:1;background:#007AFF;color:white;border:none;padding:10px 0;
+  border-radius:6px;font-size:15px;cursor:pointer;
+}
+.modal-btn-cancel{background:#8E8E93;}
+</style>
+</head>
+<body>
+<div class="main">
+
+<!-- 可排序列表容器 -->
+<div id="sortable-list">
+<div class="item" data-id="bs">
+  <h3>拔丝产量 <span class="handle">⋮⋮</span></h3>
+  <input id="bs_d" placeholder="直径" oninput="this.value='直径 '+(this.value.replace(/直径/g,''))">
+  <input id="bs_v" placeholder="车速" oninput="this.value='车速 '+(this.value.replace(/车速/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="bs()">计算</button>
+    <button class="clear" onclick="clearBs()">清空</button>
+  </div>
+  <div class="res" id="bs_r"></div>
+</div>
+
+<div class="item" data-id="dx">
+  <h3>镀锌产量 <span class="handle">⋮⋮</span></h3>
+  <input id="dx_d" placeholder="直径" oninput="this.value='直径 '+(this.value.replace(/直径/g,''))">
+  <input id="dx_v" placeholder="车速" oninput="this.value='车速 '+(this.value.replace(/车速/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="dx()">计算</button>
+    <button class="clear" onclick="clearDx()">清空</button>
+  </div>
+  <div class="res" id="dx_r"></div>
+</div>
+
+<div class="item" data-id="jm">
+  <h3>减面率计算 <span class="handle">⋮⋮</span></h3>
+  <input id="jm_d1" placeholder="拔前直径" oninput="this.value='拔前直径 '+(this.value.replace(/拔前直径/g,''))">
+  <input id="jm_d2" placeholder="拔后直径" oninput="this.value='拔后直径 '+(this.value.replace(/拔后直径/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="jm()">计算</button>
+    <button class="clear" onclick="clearJm()">清空</button>
+  </div>
+  <div class="res" id="jm_r"></div>
+</div>
+
+<div class="item" data-id="wz">
+  <h3>重量计算 <span class="handle">⋮⋮</span></h3>
+  <input id="wz_d" placeholder="直径" oninput="this.value='直径 '+(this.value.replace(/直径/g,''))">
+  <input id="wz_m" placeholder="米数" oninput="this.value='米数 '+(this.value.replace(/米数/g,''))">
+  <input id="wz_x" value="6.11" placeholder="系数6.11" oninput="this.value='系数 '+(this.value.replace(/系数/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="wz()">计算</button>
+    <button class="clear" onclick="clearWz()">清空</button>
+  </div>
+  <div class="res" id="wz_r"></div>
+</div>
+
+<div class="item" data-id="ms">
+  <h3>米数计算 <span class="handle">⋮⋮</span></h3>
+  <input id="ms_w" placeholder="重量" oninput="this.value='重量 '+(this.value.replace(/重量/g,''))">
+  <input id="ms_d" placeholder="直径" oninput="this.value='直径 '+(this.value.replace(/直径/g,''))">
+  <input id="ms_x" value="6.11" placeholder="系数6.11" oninput="this.value='系数 '+(this.value.replace(/系数/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="ms()">计算</button>
+    <button class="clear" onclick="clearMs()">清空</button>
+  </div>
+  <div class="res" id="ms_r"></div>
+</div>
+
+<!-- 以下为密码验证后显示的加密模块 -->
+<div class="item hidden-item" data-id="bz" data-lock="true">
+  <h3>拔后上锌量 <span class="handle">⋮⋮</span></h3>
+  <input id="bz_z" placeholder="拔前上锌量" oninput="this.value='拔前上锌量 '+(this.value.replace(/拔前上锌量/g,''))">
+  <input id="bz_d2" placeholder="拔后直径" oninput="this.value='拔后直径 '+(this.value.replace(/拔后直径/g,''))">
+  <input id="bz_d1" placeholder="拔前直径" oninput="this.value='拔前直径 '+(this.value.replace(/拔前直径/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="bz()">计算</button>
+    <button class="clear" onclick="clearBz()">清空</button>
+  </div>
+  <div class="res" id="bz_r"></div>
+</div>
+
+<div class="item hidden-item" data-id="sc" data-lock="true">
+  <h3>实测上锌量 <span class="handle">⋮⋮</span></h3>
+  <input id="sc_b" placeholder="白丝重量" oninput="this.value='白丝重量 '+(this.value.replace(/白丝重量/g,''))">
+  <input id="sc_h" placeholder="黑丝重量" oninput="this.value='黑丝重量 '+(this.value.replace(/黑丝重量/g,''))">
+  <input id="sc_d" placeholder="黑丝直径" oninput="this.value='黑丝直径 '+(this.value.replace(/黑丝直径/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="sc()">计算</button>
+    <button class="clear" onclick="clearSc()">清空</button>
+  </div>
+  <div class="res" id="sc_r"></div>
+</div>
+
+<div class="item hidden-item" data-id="qd" data-lock="true">
+  <h3>拔后强度 <span class="handle">⋮⋮</span></h3>
+  <input id="qd_q" placeholder="拔前强度" oninput="this.value='拔前强度 '+(this.value.replace(/拔前强度/g,''))">
+  <input id="qd_d1" placeholder="拔前直径" oninput="this.value='拔前直径 '+(this.value.replace(/拔前直径/g,''))">
+  <input id="qd_d2" placeholder="拔后直径" oninput="this.value='拔后直径 '+(this.value.replace(/拔后直径/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="qd()">计算</button>
+    <button class="clear" onclick="clearQd()">清空</button>
+  </div>
+  <div class="res" id="qd_r"></div>
+</div>
+
+<div class="item hidden-item" data-id="qd2" data-lock="true">
+  <h3>强度计算 <span class="handle">⋮⋮</span></h3>
+  <input id="qd2_f" placeholder="拉断力" oninput="this.value='拉断力 '+(this.value.replace(/拉断力/g,''))">
+  <input id="qd2_d" placeholder="直径" oninput="this.value='直径 '+(this.value.replace(/直径/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="qd2()">计算</button>
+    <button class="clear" onclick="clearQd2()">清空</button>
+  </div>
+  <div class="res" id="qd2_r"></div>
+</div>
+
+<div class="item hidden-item" data-id="mz" data-lock="true">
+  <h3>木轴长度容量 <span class="handle">⋮⋮</span></h3>
+  <input id="mz_n" placeholder="内宽" oninput="this.value='内宽 '+(this.value.replace(/内宽/g,''))">
+  <input id="mz_w" placeholder="外圆直径" oninput="this.value='外圆直径 '+(this.value.replace(/外圆直径/g,''))">
+  <input id="mz_t" placeholder="轴筒直径" oninput="this.value='轴筒直径 '+(this.value.replace(/轴筒直径/g,''))">
+  <input id="mz_d" placeholder="绞线直径" oninput="this.value='绞线直径 '+(this.value.replace(/绞线直径/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="mz()">计算</button>
+    <button class="clear" onclick="clearMz()">清空</button>
+  </div>
+  <div class="res" id="mz_r"></div>
+</div>
+
+<div class="item hidden-item" data-id="mzw" data-lock="true">
+  <h3>木轴重量容量 <span class="handle">⋮⋮</span></h3>
+  <input id="mzw_d" placeholder="绞线直径" oninput="this.value='绞线直径 '+(this.value.replace(/绞线直径/g,''))">
+  <input id="mzw_m" placeholder="长度" oninput="this.value='长度 '+(this.value.replace(/长度/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="mzw()">计算</button>
+    <button class="clear" onclick="clearMzw()">清空</button>
+  </div>
+  <div class="res" id="mzw_r"></div>
+</div>
+
+<div class="item hidden-item" data-id="yg" data-lock="true">
+  <h3>圆钢重量 <span class="handle">⋮⋮</span></h3>
+  <input id="yg_d" placeholder="直径" oninput="this.value='直径 '+(this.value.replace(/直径/g,''))">
+  <input id="yg_l" placeholder="长度" oninput="this.value='长度 '+(this.value.replace(/长度/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="yg()">计算</button>
+    <button class="clear" onclick="clearYg()">清空</button>
+  </div>
+  <div class="res" id="yg_r"></div>
+</div>
+
+<div class="item hidden-item" data-id="tb" data-lock="true">
+  <h3>铁板重量 <span class="handle">⋮⋮</span></h3>
+  <input id="tb_c" placeholder="长" oninput="this.value='长 '+(this.value.replace(/长/g,''))">
+  <input id="tb_k" placeholder="宽" oninput="this.value='宽 '+(this.value.replace(/宽/g,''))">
+  <input id="tb_g" placeholder="高" oninput="this.value='高 '+(this.value.replace(/高/g,''))">
+  <div class="btn-row">
+    <button class="calc" onclick="tb()">计算</button>
+    <button class="clear" onclick="clearTb()">清空</button>
+  </div>
+  <div class="res" id="tb_r"></div>
+</div>
+</div>
+
+<!-- 底部天津燎原隐藏按钮 -->
+<div class="item footer-item" id="footer-btn">
+  <div class="footer-content">天津燎原</div>
+</div>
+
+</div>
+
+<!-- 通用提示弹窗（图1、图2） -->
+<div class="modal-overlay" id="tipModal">
+  <div class="modal-box">
+    <div class="modal-text" id="tipText">请输入数值</div>
+    <div class="modal-btn-row">
+      <button class="modal-btn" onclick="hideTipModal()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 密码输入弹窗（图3） -->
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal-box">
+    <div class="modal-text">请输入密码</div>
+    <input id="pwdInput" type="password" placeholder="请输入密码" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:15px;">
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="hidePwdModal()">取消</button>
+      <button class="modal-btn" onclick="checkPwd()">确定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function $(id){return document.getElementById(id)}
+
+// 正确密码
+const correctPwd = 'tjslygjxc';
+// 点击计数
+let clickCount = 0;
+let clickTimer = null;
+
+// --- 弹窗控制函数 ---
+// 通用提示弹窗
+function showTipModal(){
+  $("tipModal").style.display = "flex";
+}
+function hideTipModal(){
+  $("tipModal").style.display = "none";
+}
+// 密码弹窗
+function showPwdModal(){
+  $("pwdInput").value = "";
+  $("pwdModal").style.display = "flex";
+  $("pwdInput").focus();
+}
+function hidePwdModal(){
+  $("pwdModal").style.display = "none";
+}
+
+// --- 加密模块隐藏函数 ---
+function hideLockedItems(){
+  // 给所有加密模块加回隐藏样式
+  let lockedItems = document.querySelectorAll('[data-lock="true"]');
+  lockedItems.forEach(function(item){
+    item.classList.add('hidden-item');
+  });
+  // 清除本地解锁状态
+  localStorage.removeItem('authPass');
+  // 重置点击计数
+  clickCount = 0;
+  // 提示用户
+  showTipModal();
+  $("tipText").innerText = "功能已隐藏";
+}
+
+// --- 底部按钮点击计数逻辑（2次隐藏/5次解锁）---
+$("footer-btn").addEventListener('click', function(){
+  // 清除之前的定时器
+  clearTimeout(clickTimer);
+  // 点击计数+1
+  clickCount++;
+
+  // 先判断：已解锁状态下，连续点击2次，触发隐藏
+  let authPass = localStorage.getItem('authPass') === 'true';
+  if(authPass && clickCount >= 2){
+    hideLockedItems();
+    return;
+  }
+
+  // 未解锁状态下，连续点击5次，触发密码弹窗
+  if(!authPass && clickCount >= 5){
+    clickCount = 0;
+    showPwdModal();
+    return;
+  }
+
+  // 1秒内没点击，重置计数
+  clickTimer = setTimeout(function(){
+    clickCount = 0;
+  }, 1000);
+});
+
+// --- 密码校验函数 ---
+function checkPwd(){
+  let inputPwd = $("pwdInput").value.trim();
+  if(inputPwd === correctPwd){
+    // 密码正确，显示所有加密模块
+    let lockedItems = document.querySelectorAll('[data-lock="true"]');
+    lockedItems.forEach(function(item){
+      item.classList.remove('hidden-item');
+    });
+    // 保存验证状态到本地存储
+    localStorage.setItem('authPass', 'true');
+    hidePwdModal();
+    showTipModal();
+    $("tipText").innerText = "验证成功，功能已解锁";
+  } else {
+    showTipModal();
+    $("tipText").innerText = "密码错误，请重试";
+  }
+}
+
+// --- 页面加载时恢复验证状态 ---
+function loadAuthStatus(){
+  let authPass = localStorage.getItem('authPass');
+  if(authPass === 'true'){
+    let lockedItems = document.querySelectorAll('[data-lock="true"]');
+    lockedItems.forEach(function(item){
+      item.classList.remove('hidden-item');
+    });
+  }
+}
+
+// --- 清空函数 ---
+function clearBs(){$("bs_d").value="";$("bs_v").value="";$("bs_r").innerText=""}
+function clearDx(){$("dx_d").value="";$("dx_v").value="";$("dx_r").innerText=""}
+function clearBz(){$("bz_z").value="";$("bz_d2").value="";$("bz_d1").value="";$("bz_r").innerText=""}
+function clearSc(){$("sc_b").value="";$("sc_h").value="";$("sc_d").value="";$("sc_r").innerText=""}
+function clearQd(){$("qd_q").value="";$("qd_d1").value="";$("qd_d2").value="";$("qd_r").innerText=""}
+function clearQd2(){$("qd2_f").value="";$("qd2_d").value="";$("qd2_r").innerText=""}
+function clearJm(){$("jm_d1").value="";$("jm_d2").value="";$("jm_r").innerText=""}
+function clearWz(){$("wz_d").value="";$("wz_m").value="";$("wz_x").value="6.11";$("wz_r").innerText=""}
+function clearMs(){$("ms_w").value="";$("ms_d").value="";$("ms_x").value="6.11";$("ms_r").innerText=""}
+function clearMz(){$("mz_n").value="";$("mz_w").value="";$("mz_t").value="";$("mz_d").value="";$("mz_r").innerText=""}
+function clearMzw(){$("mzw_d").value="";$("mzw_m").value="";$("mzw_r").innerText=""}
+function clearYg(){$("yg_d").value="";$("yg_l").value="";$("yg_r").innerText=""}
+function clearTb(){$("tb_c").value="";$("tb_k").value="";$("tb_g").value="";$("tb_r").innerText=""}
+
+// --- 带单位的计算函数 ---
+function bs(){
+  let d=parseFloat($("bs_d").value.replace(/直径/g,''))||0;
+  let v=parseFloat($("bs_v").value.replace(/车速/g,''))||0;
+  if(d<=0 || v<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入有效的直径和车速数值";
+    return;
+  }
+  let day = d*d*v*8.8;
+  let hour = day/24;
+  $("bs_r").innerText = "日产量："+day.toFixed(2)+" kg\n小时产量："+hour.toFixed(2)+" kg";
+}
+
+function dx(){
+  let d=parseFloat($("dx_d").value.replace(/直径/g,''))||0;
+  let v=parseFloat($("dx_v").value.replace(/车速/g,''))||0;
+  if(d<=0 || v<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入有效的直径和车速数值";
+    return;
+  }
+  let day = d*d*v*18;
+  let hour = day/24;
+  $("dx_r").innerText = "日产量："+day.toFixed(2)+" kg\n小时产量："+hour.toFixed(2)+" kg";
+}
+
+function bz(){
+  let z=parseFloat($("bz_z").value.replace(/拔前上锌量/g,''))||0;
+  let d2=parseFloat($("bz_d2").value.replace(/拔后直径/g,''))||0;
+  let d1=parseFloat($("bz_d1").value.replace(/拔前直径/g,''))||0;
+  if(z<=0 || d2<=0 || d1<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入完整有效的数值";
+    return;
+  }
+  $("bz_r").innerText = "结果："+(z*d2/d1).toFixed(2)+" g/m²";
+}
+
+function sc(){
+  let b=parseFloat($("sc_b").value.replace(/白丝重量/g,''))||0;
+  let h=parseFloat($("sc_h").value.replace(/黑丝重量/g,''))||0;
+  let d=parseFloat($("sc_d").value.replace(/黑丝直径/g,''))||0;
+  if(b<=0 || h<=0 || d<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入完整有效的数值";
+    return;
+  }
+  $("sc_r").innerText = "结果："+((b-h)/h*d*1950).toFixed(2)+" g/m²";
+}
+
+function qd(){
+  let q=parseFloat($("qd_q").value.replace(/拔前强度/g,''))||0;
+  let d1=parseFloat($("qd_d1").value.replace(/拔前直径/g,''))||0;
+  let d2=parseFloat($("qd_d2").value.replace(/拔后直径/g,''))||0;
+  if(q<=0 || d1<=0 || d2<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入完整有效的数值";
+    return;
+  }
+  $("qd_r").innerText = "结果："+(q*Math.sqrt(d1/d2)).toFixed(2)+" MPa";
+}
+
+function qd2(){
+  let f=parseFloat($("qd2_f").value.replace(/拉断力/g,''))||0;
+  let d=parseFloat($("qd2_d").value.replace(/直径/g,''))||0;
+  if(f<=0 || d<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入有效的拉断力和直径数值";
+    return;
+  }
+  $("qd2_r").innerText = "结果："+(f/d/d/0.7854).toFixed(2)+" MPa";
+}
+
+function jm(){
+  let d1=parseFloat($("jm_d1").value.replace(/拔前直径/g,''))||0;
+  let d2=parseFloat($("jm_d2").value.replace(/拔后直径/g,''))||0;
+  if(d1<=0 || d2<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入有效的直径数值";
+    return;
+  }
+  let rate = 1 - (d2*d2)/(d1*d1);
+  $("jm_r").innerText = "减面率："+(rate*100).toFixed(2)+" %";
+}
+
+function wz(){
+  let d=parseFloat($("wz_d").value.replace(/直径/g,''))||0;
+  let m=parseFloat($("wz_m").value.replace(/米数/g,''))||0;
+  let x=parseFloat($("wz_x").value.replace(/系数/g,''))||0;
+  if(d<=0 || m<=0 || x<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入完整有效的数值";
+    return;
+  }
+  $("wz_r").innerText = "重量："+(d*d*x*m/1000).toFixed(3)+" kg";
+}
+
+function ms(){
+  let w=parseFloat($("ms_w").value.replace(/重量/g,''))||0;
+  let d=parseFloat($("ms_d").value.replace(/直径/g,''))||0;
+  let x=parseFloat($("ms_x").value.replace(/系数/g,''))||0;
+  if(w<=0 || d<=0 || x<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入完整有效的数值";
+    return;
+  }
+  $("ms_r").innerText = "米数："+(w/d/d/x*1000).toFixed(2)+" m";
+}
+
+function mz(){
+  let n=parseFloat($("mz_n").value.replace(/内宽/g,''))||0;
+  let w=parseFloat($("mz_w").value.replace(/外圆直径/g,''))||0;
+  let t=parseFloat($("mz_t").value.replace(/轴筒直径/g,''))||0;
+  let d=parseFloat($("mz_d").value.replace(/绞线直径/g,''))||0;
+  if(n<=0 || w<=0 || t<=0 || d<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入完整有效的数值";
+    return;
+  }
+  $("mz_r").innerText = "长度："+(0.74*n*(w*w-t*t)/d/d).toFixed(2)+" m";
+}
+
+function mzw(){
+  let d=parseFloat($("mzw_d").value.replace(/绞线直径/g,''))||0;
+  let m=parseFloat($("mzw_m").value.replace(/长度/g,''))||0;
+  if(d<=0 || m<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入有效的绞线直径和长度数值";
+    return;
+  }
+  $("mzw_r").innerText = "重量："+(7.168*6.11*d*d/9*m/1000).toFixed(3)+" kg";
+}
+
+function yg(){
+  let d=parseFloat($("yg_d").value.replace(/直径/g,''))||0;
+  let l=parseFloat($("yg_l").value.replace(/长度/g,''))||0;
+  if(d<=0 || l<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入有效的直径和长度数值";
+    return;
+  }
+  $("yg_r").innerText = "重量："+(d*d*l*0.00617).toFixed(3)+" kg";
+}
+
+function tb(){
+  let c=parseFloat($("tb_c").value.replace(/长/g,''))||0;
+  let k=parseFloat($("tb_k").value.replace(/宽/g,''))||0;
+  let g=parseFloat($("tb_g").value.replace(/高/g,''))||0;
+  if(c<=0 || k<=0 || g<=0){
+    showTipModal();
+    $("tipText").innerText = "请输入有效的长、宽、高数值";
+    return;
+  }
+  $("tb_r").innerText = "重量："+(c*k*g*7.85).toFixed(3)+" kg";
+}
+
+// --- 拖拽排序核心逻辑 ---
+document.addEventListener('DOMContentLoaded', function () {
+  // 先恢复验证状态
+  loadAuthStatus();
+
+  let sortableList = document.getElementById('sortable-list');
+  
+  // 初始化拖拽
+  let sortable = Sortable.create(sortableList, {
+    animation: 150, // 拖拽动画时长
+    handle: '.handle', // 只有点右侧的⋮⋮图标才能拖动，防止误触输入框
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    onEnd: function (evt) {
+      // 拖拽结束后保存顺序
+      saveOrder();
+    }
+  });
+
+  // 保存顺序到本地存储
+  function saveOrder() {
+    let order = [];
+    let items = sortableList.querySelectorAll('.item');
+    items.forEach(function(item) {
+      order.push(item.getAttribute('data-id'));
+    });
+    localStorage.setItem('calcOrder', JSON.stringify(order));
+  }
+
+  // 页面加载时恢复之前的顺序
+  function loadOrder() {
+    let savedOrder = localStorage.getItem('calcOrder');
+    if (savedOrder) {
+      let order = JSON.parse(savedOrder);
+      order.forEach(function(id) {
+        let item = sortableList.querySelector('.item[data-id="' + id + '"]');
+        if (item) {
+          sortableList.appendChild(item);
+        }
+      });
+    }
+  }
+
+  // 恢复排序顺序
+  loadOrder();
+});
+</script>
+</body>
 </html>
